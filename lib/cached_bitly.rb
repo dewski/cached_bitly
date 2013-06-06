@@ -109,11 +109,18 @@ module CachedBitly
     end
   end
 
-  # Handles generating the short url and storing it.
+  # Handles generating the short url and storing it. Won't raise
+  # exceptions if this is already a shortened link.
   #
   # Returns short url if stored, false if not.
   def shorten(url)
-    url = bitly_client.shorten(url)
+    begin
+      url = bitly_client.shorten(url)
+    rescue Exception => e
+      raise e unless e.message.match 'ALREADY_A_BITLY_LINK'
+      url = Struct.new(:long_url, :short_url).new(url, url)
+    end
+
     if save(url.long_url, url.short_url)
       bump_total
       url.short_url
